@@ -1,6 +1,9 @@
+import os
+import uuid
 import random
 from fastapi import FastAPI, UploadFile, Form
 from public_data import get_food_data, calculate_kcal_per_serving
+#from estimation import estimate_weight
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -23,10 +26,20 @@ async def calculate_kcal_with_image(
     food_name: str = Form(..., description="음식 이름"),
     image: UploadFile = Form(..., description="음식 이미지")
 ):
-    # 음식 데이터를 가져옴
+    save_directory = "uploaded_images"
+    os.makedirs(save_directory, exist_ok=True)  # 디렉토리가 없으면 생성
+
+    # UUID로 파일 이름 생성
+    file_extension = image.filename.split('.')[-1]  # 원본 파일 확장자 추출
+    unique_filename = f"{uuid.uuid4()}.{file_extension}"  # UUID 기반 파일 이름 생성
+    file_path = os.path.join(save_directory, unique_filename)
+
+    # 파일 데이터를 읽고 저장
+    with open(file_path, "wb") as file:
+        file.write(await image.read())
+
     nutrients_data = get_food_data(food_name)
     if nutrients_data:
-        # 음식 무게를 랜덤값으로 추정 (50g ~ 500g 사이)
         estimated_weight = random.uniform(50, 500)
         kcal = calculate_kcal_per_serving(estimated_weight, nutrients_data)
         return {
